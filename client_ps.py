@@ -396,7 +396,6 @@ class AClient(Client):
     # use semaphores in stead of time.sleep() to limit concurrency, since sleep stops sub-processes from running
 
     async def fetch_full_friends(self, offline=False, n=0, offset=0):
-        sem = asyncio.Semaphore(0)
         '''
         Used to get friends of current user
         !! This function uses possibly lot of calls, use with caution
@@ -412,16 +411,15 @@ class AClient(Client):
 
         Returns list of User objects
         '''
-        await sem.acquire()
-        try:
-            # work with shared resource
-            lfriends = await self.fetch_friends(offline, n, offset)
-            friends = []
-            # Get friends
-            for friend in lfriends:
-                friends.append(await friend.fetch_full())
-        finally:
-            sem.release()
+
+        lfriends = await self.fetch_friends(offline, n, offset)
+        friends = []
+
+        # Get friends
+        for friend in lfriends:
+            asyncio.sleep(0)
+            friends.append(await friend.fetch_full())
+
         return friends
 
     async def fetch_friends(self, offline=False, n=0, offset=0):
@@ -556,37 +554,17 @@ class AClient(Client):
 
         Returns list of Avatar objects
         '''
-
+        #UPDATE: replaced cleaned up 'if' statements
         p = {}
 
-        if user:
-            p["user"] = user
-        if featured:
-            p["featured"] = featured
-        if tag:
-            p["tag"] = tag
-        if userId:
-            p["userId"] = userId
-        if n:
-            p["n"] = n
-        if offset:
-            p["offset"] = offset
-        if order:
-            p["order"] = order
-        if releaseStatus:
-            p["releaseStatus"] = releaseStatus
-        if sort:
-            p["sort"] = sort
-        if maxUnityVersion:
-            p["maxUnityVersion"] = maxUnityVersion
-        if minUnityVersion:
-            p["minUnityVersion"] = minUnityVersion
-        if maxAssetVersion:
-            p["maxAssetVersion"] = maxAssetVersion
-        if minAssetVersion:
-            p["minAssetVersion"] = minAssetVersion
-        if platform:
-            p["platform"] = platform
+        bool_keys = ['user', 'featured', 'tag', 'userId', 'n', 'offset', 'order', 'releaseStatus', 'sort',
+                     'maxUnityVersion', 'minUnityVersion', 'maxAssetVersion', 'minAssetVersion', 'platform']
+        bool_list = [user, featured, tag]
+        i = 0
+        for item in bool_list:
+            if item:
+                p[bool_keys(i)] = item
+            i+=1
 
         resp = await self.api.call("/avatars", params=p)
 
